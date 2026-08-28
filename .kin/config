@@ -1,0 +1,5 @@
+project: BYOA
+description: Bring Your Own Agent - Enterprise Architecture and Differential Privacy proof for structured telemetry without transcripts.
+work_policy:
+  linear:
+    enabled: false

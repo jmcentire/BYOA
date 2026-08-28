@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BYOA  Bring Your Own Agent</title>
+<meta name="description" content="An architecture for letting a customer's own agent do the work. Publish your tools, policies and error semantics instead of building a bot nobody wants to learn.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sheet:#E3E6EB;
+  --sheet-2:#D5DAE2;
+  --panel:#EEF0F4;
+  --ink:#16203A;
+  --ink-2:#4E5A76;
+  --ink-3:#8593A9;
+  --rule:#B4BCCA;
+  --signal:#0D6C61;
+  --signal-pale:#7FC0B6;
+  --stale:#B4503B;
+  --blueprint:#111C33;
+
+  --display:"Archivo",-apple-system,"Segoe UI",system-ui,sans-serif;
+  --body:"Newsreader",Georgia,"Times New Roman",serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+
+  --gut:clamp(1.25rem,5vw,4rem);
+  --max:1180px;
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  background:var(--sheet);
+  color:var(--ink);
+  font-family:var(--body);
+  font-size:1.0625rem;
+  line-height:1.62;
+  font-optical-sizing:auto;
+}
+::selection{background:var(--signal);color:#fff}
+
+.wrap{max-width:var(--max);margin:0 auto;padding-inline:var(--gut)}
+.band{padding-block:clamp(3.5rem,8vw,6.5rem);border-top:1px solid var(--rule)}
+.band:first-of-type{border-top:0}
+
+/* ---------- type roles ---------- */
+.eyebrow{
+  font-family:var(--mono);font-size:.7rem;font-weight:500;
+  letter-spacing:.18em;text-transform:uppercase;color:var(--signal);
+  margin:0 0 1.25rem;
+}
+h1{
+  font-family:var(--display);font-weight:800;
+  font-size:clamp(2.9rem,10.5vw,7.25rem);
+  line-height:.86;letter-spacing:-.035em;text-transform:uppercase;
+  margin:0 0 1.5rem;
+}
+h2{
+  font-family:var(--display);font-weight:700;
+  font-size:clamp(1.7rem,4.2vw,2.9rem);
+  line-height:1;letter-spacing:-.025em;text-transform:uppercase;
+  margin:0 0 1.25rem;max-width:22ch;
+}
+h3{
+  font-family:var(--display);font-weight:700;font-size:1.02rem;
+  letter-spacing:.01em;margin:0 0 .5rem;
+}
+.deck{
+  font-size:clamp(1.15rem,2.4vw,1.55rem);
+  line-height:1.45;max-width:34ch;color:var(--ink);margin:0 0 2.25rem;
+}
+.lede{max-width:62ch;color:var(--ink-2);margin:0 0 1.5rem}
+p{max-width:66ch}
+a{color:var(--ink);text-underline-offset:.22em;text-decoration-thickness:1px}
+a:hover{color:var(--signal)}
+:focus-visible{outline:2px solid var(--signal);outline-offset:3px}
+
+/* ---------- top bar ---------- */
+.top{
+  display:flex;align-items:baseline;justify-content:space-between;gap:1rem;
+  padding:1.1rem 0 1rem;border-bottom:1px solid var(--rule);
+  font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+}
+.top nav{display:flex;gap:1.4rem;flex-wrap:wrap}
+.top a{text-decoration:none;color:var(--ink-2)}
+.top a:hover{color:var(--signal)}
+.mark{font-weight:500;letter-spacing:.22em}
+
+/* ---------- hero ---------- */
+.hero{padding-block:clamp(3rem,7vw,5.5rem) 0}
+.cta{display:flex;gap:.85rem;flex-wrap:wrap;margin-bottom:.5rem}
+.btn{
+  font-family:var(--mono);font-size:.76rem;letter-spacing:.13em;text-transform:uppercase;
+  padding:.85rem 1.3rem;text-decoration:none;border:1px solid var(--ink);
+  background:var(--ink);color:var(--sheet);transition:background .18s,color .18s;
+}
+.btn:hover{background:var(--signal);border-color:var(--signal);color:#fff}
+.btn.ghost{background:transparent;color:var(--ink)}
+.btn.ghost:hover{background:var(--ink);color:var(--sheet);border-color:var(--ink)}
+
+/* ---------- signature: the blueprint ---------- */
+.print{
+  background:var(--blueprint);color:#DCE4F2;
+  padding:clamp(1.4rem,4vw,2.75rem);
+  margin-top:clamp(2.5rem,6vw,4rem);
+  box-shadow:0 1px 0 rgba(0,0,0,.35);
+}
+.print-head{
+  display:flex;justify-content:space-between;align-items:flex-end;gap:1rem;
+  flex-wrap:wrap;margin-bottom:1.6rem;
+  border-bottom:1px solid rgba(220,228,242,.22);padding-bottom:1rem;
+}
+.print-title{
+  font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--signal-pale);
+}
+.toggle{display:flex;border:1px solid rgba(220,228,242,.28)}
+.toggle button{
+  font-family:var(--mono);font-size:.7rem;letter-spacing:.13em;text-transform:uppercase;
+  background:transparent;color:#9FB0CC;border:0;padding:.6rem 1rem;cursor:pointer;
+  transition:background .2s,color .2s;
+}
+.toggle button[aria-pressed="true"]{background:var(--signal);color:#fff}
+
+.grid{
+  display:grid;
+  grid-template-columns:minmax(0,1.35fr) repeat(6,minmax(0,1fr));
+  gap:.4rem clamp(.3rem,1.1vw,.7rem);
+  align-items:center;
+}
+.col-head{
+  font-family:var(--mono);font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;
+  color:#8397B8;text-align:center;padding-bottom:.6rem;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.row-label{
+  font-family:var(--mono);font-size:.66rem;letter-spacing:.04em;
+  color:#B9C6DC;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.cell{
+  height:clamp(15px,3.6vw,26px);
+  background:var(--signal);opacity:.9;
+  transition:opacity .5s cubic-bezier(.2,.7,.2,1),transform .5s cubic-bezier(.2,.7,.2,1),background .4s;
+  transform-origin:left center;
+}
+.cell.origin{background:var(--signal-pale);opacity:1}
+.grid[data-mode="today"] .cell.stale{background:var(--stale)}
+.grid[data-mode="byoa"] .cell.copy{opacity:0;transform:scaleX(.06)}
+.grid[data-mode="byoa"] .col-head{opacity:.35;transition:opacity .5s}
+
+.readout{
+  display:flex;gap:clamp(1rem,4vw,2.75rem);flex-wrap:wrap;
+  margin-top:1.75rem;padding-top:1.25rem;
+  border-top:1px solid rgba(220,228,242,.22);
+}
+.metric{min-width:6.5rem}
+.metric b{
+  display:block;font-family:var(--display);font-weight:800;
+  font-size:clamp(1.9rem,5vw,2.9rem);line-height:1;letter-spacing:-.03em;color:#fff;
+  font-variant-numeric:tabular-nums;
+}
+.metric span{
+  display:block;font-family:var(--mono);font-size:.64rem;letter-spacing:.14em;
+  text-transform:uppercase;color:#8397B8;margin-top:.5rem;
+}
+.print-note{
+  font-family:var(--mono);font-size:.72rem;line-height:1.7;color:#9FB0CC;
+  margin:1.4rem 0 0;max-width:60ch;
+}
+
+/* ---------- generic layouts ---------- */
+.split{display:grid;grid-template-columns:minmax(0,1fr);gap:clamp(1.5rem,4vw,3.5rem)}
+@media(min-width:860px){.split{grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr)}}
+
+.trio{display:grid;grid-template-columns:minmax(0,1fr);gap:2rem;margin-top:2.5rem}
+@media(min-width:760px){.trio{grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(1.5rem,3vw,3rem)}}
+.trio > div{border-top:2px solid var(--ink);padding-top:1rem}
+.trio p{font-size:.98rem;color:var(--ink-2);margin:0}
+.tag{
+  font-family:var(--mono);font-size:.64rem;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--signal);display:block;margin-bottom:.7rem;
+}
+
+table{width:100%;border-collapse:collapse;margin-top:2rem;font-size:.97rem}
+caption{
+  font-family:var(--mono);font-size:.66rem;letter-spacing:.15em;text-transform:uppercase;
+  color:var(--ink-3);text-align:left;padding-bottom:.9rem;
+}
+th,td{text-align:left;padding:.8rem .6rem;border-bottom:1px solid var(--rule);vertical-align:top}
+th{
+  font-family:var(--mono);font-weight:500;font-size:.66rem;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);
+}
+td:first-child{color:var(--ink-2);width:34%}
+.owns{font-family:var(--display);font-weight:700;font-size:.82rem;letter-spacing:.06em;text-transform:uppercase}
+.owns.a{color:var(--signal)}
+.owns.b{color:var(--ink)}
+
+ol.steps{list-style:none;counter-reset:s;padding:0;margin:2.25rem 0 0;max-width:70ch}
+ol.steps li{counter-increment:s;padding-left:3.25rem;position:relative;margin-bottom:1.4rem}
+ol.steps li::before{
+  content:counter(s,decimal-leading-zero);position:absolute;left:0;top:.12em;
+  font-family:var(--mono);font-size:.74rem;letter-spacing:.1em;color:var(--signal);
+}
+
+.layers{display:grid;grid-template-columns:minmax(0,1fr);gap:0;margin-top:2.25rem;border-top:1px solid var(--rule)}
+.layer{
+  display:grid;grid-template-columns:minmax(0,1fr);gap:.35rem;
+  padding:1.35rem 0;border-bottom:1px solid var(--rule);
+}
+@media(min-width:760px){.layer{grid-template-columns:11rem minmax(0,1fr);gap:2rem;align-items:baseline}}
+.layer p{margin:0;color:var(--ink-2);font-size:.99rem}
+.layer h3{margin:0}
+
+pre{
+  background:var(--blueprint);color:#CFDCEF;
+  font-family:var(--mono);font-size:.78rem;line-height:1.75;
+  padding:1.4rem clamp(1rem,3vw,1.75rem);margin:2.25rem 0 0;
+  overflow-x:auto;
+}
+pre .k{color:var(--signal-pale)}
+pre .v{color:#F0D9A8}
+pre .n{color:#9FB0CC}
+
+.cards{display:grid;grid-template-columns:minmax(0,1fr);gap:1.25rem;margin-top:2.25rem}
+@media(min-width:720px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.card{
+  background:var(--panel);border:1px solid var(--rule);padding:1.6rem;
+  text-decoration:none;color:inherit;display:block;transition:border-color .2s,transform .2s;
+}
+.card:hover{border-color:var(--signal);transform:translateY(-2px)}
+.card .tag{color:var(--ink-3)}
+.card p{margin:0;font-size:.96rem;color:var(--ink-2)}
+.card h3{color:var(--ink)}
+
+footer{
+  border-top:1px solid var(--rule);padding-block:2.5rem 3.5rem;
+  font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;color:var(--ink-3);
+  display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;
+}
+footer a{color:var(--ink-2);text-decoration:none}
+footer a:hover{color:var(--signal)}
+
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{transition-duration:.01ms !important;animation-duration:.01ms !important}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="top">
+    <span class="mark">BYOA.TOOLS</span>
+    <nav>
+      <a href="/#chore">The chore</a>
+      <a href="/#inversion">The inversion</a>
+      <a href="/#surface">The surface</a>
+      <a href="/#loop">Feedback</a>
+      <a href="/math.html" style="color:var(--signal)">The Math</a>
+    </nav>
+  </div>
+</div>
+
+<header class="wrap hero">
+  <p class="eyebrow">Bring your own agent</p>
+  <h1>Stop building<br>a bot nobody<br>wants to learn</h1>
+  <p class="deck">Publish your tools, your policies and your failure semantics. Let the customer's own agent do the work  it already knows things yours never will.</p>
+  <div class="cta">
+    <a class="btn" href="#surface">See what you publish</a>
+    <a class="btn ghost" href="#inversion">Why it beats your bot</a>
+  </div>
+
+  <!-- SIGNATURE -->
+  <figure class="print" style="margin-inline:0">
+    <div class="print-head">
+      <span class="print-title">Fig. 1  Where your customer's context lives</span>
+      <div class="toggle" role="group" aria-label="Architecture">
+        <button id="btn-today" aria-pressed="true">Today</button>
+        <button id="btn-byoa" aria-pressed="false">With BYOA</button>
+      </div>
+    </div>
+
+    <div class="grid" id="grid" data-mode="today"></div>
+
+    <div class="readout">
+      <div class="metric"><b id="m1">6</b><span>Copies of you</span></div>
+      <div class="metric"><b id="m2">6</b><span>Surfaces</span></div>
+      <div class="metric"><b id="m3">6</b><span>Passwords</span></div>
+    </div>
+    <figcaption class="print-note" id="note">
+      Every company keeps its own copy of the same facts. Each one goes stale on its own schedule, and you are the only thing holding them in sync.
+    </figcaption>
+  </figure>
+</header>
+
+<main>
+
+<section class="band wrap" id="chore">
+  <div class="split">
+    <div><h2>Six companies, one conversation, six times</h2></div>
+    <div>
+      <p class="lede">Planning a week away means telling United, Delta, Airbnb, Marriott, VRBO and Wander the same things: who's coming, where you're going, what you'll eat, how you pay, which seat you want.</p>
+      <p class="lede">Every one of those agents is a stranger you have to brief. None of them talk to each other. All of them keep what you said.</p>
+    </div>
+  </div>
+
+  <div class="trio">
+    <div>
+      <span class="tag">Repetition</span>
+      <h3>You are the integration layer</h3>
+      <p>Nobody built the connective tissue between these companies, so the customer does it by hand, every time, from memory.</p>
+    </div>
+    <div>
+      <span class="tag">Staleness</span>
+      <h3>Nothing updates together</h3>
+      <p>Change a card, a diet, a name. Now recall which six systems hold the old value and which of them you actually got around to fixing.</p>
+    </div>
+    <div>
+      <span class="tag">Exposure</span>
+      <h3>Copies you can't recall</h3>
+      <p>Every disclosure is permanent and unrevocable. The customer has no ledger of what they said, to whom, or how long ago.</p>
+    </div>
+  </div>
+</section>
+
+<section class="band wrap">
+  <div class="split">
+    <div><h2>Context does not survive the handoff</h2></div>
+    <div>
+      <p class="lede">The obvious fix  let the customer's agent brief each company's agent  trades one problem for a worse one. Passing context agent-to-agent degrades it. Detail is dropped, intent is paraphrased, and by the third hop the receiving system is acting on a summary of a summary.</p>
+      <p class="lede">Delegation between agents is a lossy channel. An architecture that depends on it inherits the loss.</p>
+      <p class="lede">BYOA removes the hop. The customer's agent talks to your systems directly, against a surface you publish and control.</p>
+    </div>
+  </div>
+</section>
+
+<section class="band wrap" id="inversion">
+  <div class="split">
+    <div>
+      <h2>Own the environment, not the agent</h2>
+      <p class="lede">A company-owned agent bundles four things that don't need to live together: what you know, what you can do, how you do it, and how you learn. Only the fifth  the customer's history, preferences and standing context  needs to sit with the customer. So put it there.</p>
+    </div>
+    <div>
+      <table>
+        <caption>Division of responsibility</caption>
+        <thead><tr><th scope="col">Concern</th><th scope="col">Their agent</th><th scope="col">Your surface</th></tr></thead>
+        <tbody>
+          <tr><td>Long-term relationship and preferences</td><td><span class="owns a">Owns</span></td><td></td></tr>
+          <tr><td>Cross-company planning</td><td><span class="owns a">Owns</span></td><td></td></tr>
+          <tr><td>Facts, prices, policies</td><td>Consumes</td><td><span class="owns b">Owns</span></td></tr>
+          <tr><td>Workflow and confirmation rules</td><td>Follows</td><td><span class="owns b">Publishes</span></td></tr>
+          <tr><td>Actions against your systems</td><td>Requests</td><td><span class="owns b">Executes</span></td></tr>
+          <tr><td>Authorization</td><td>Requests on behalf</td><td><span class="owns b">Enforces</span></td></tr>
+          <tr><td>What actually happened</td><td>Explains</td><td><span class="owns b">Attests</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="band wrap">
+  <div class="split">
+    <div>
+      <h2>Their agent is a better support engineer than yours</h2>
+      <p class="lede">Not because it's a better model. Because it was in the room for everything that led up to the problem.</p>
+    </div>
+    <div>
+      <p class="lede"><strong>The ticket:</strong> the speakers in the den cut out whenever the TV is on.</p>
+      <ol class="steps">
+        <li>It set up this house's network last spring, so it already knows the SSID layout, which band the den is on, and that the mesh node behind the TV was added later.</li>
+        <li>It can reach the devices. It queries the speaker directly, pulls the firmware revision, and reads the actual channel it landed on.</li>
+        <li>It finds the receipt. A search of the customer's own mail turns up a range extender bought in March that nobody mentioned, broadcasting on the same channel.</li>
+        <li>It asks you the one question it can't answer itself  whether your firmware has a known conflict on that band  and you answer it from a published resource, with a version and a rule ID.</li>
+        <li>It writes the answer the way this customer likes to read it: short, dense, technical, no preamble.</li>
+      </ol>
+      <p class="lede" style="margin-top:2rem">Your agent could not have done step one, two, three or five. It would have opened with "have you tried restarting the device."</p>
+    </div>
+  </div>
+</section>
+
+<section class="band wrap" id="surface">
+  <div class="split">
+    <div>
+      <h2>What you publish</h2>
+      <p class="lede">Four layers, all machine-readable, all versioned. Serve them over MCP, an OpenAPI description, or both. None of it requires knowing which agent is on the other end.</p>
+    </div>
+    <div>
+      <div class="layers">
+        <div class="layer">
+          <h3>Capabilities</h3>
+          <p>Typed tools with input and output schemas, side-effect class, required scopes, idempotency and retry semantics, and whether the action needs explicit human confirmation.</p>
+        </div>
+        <div class="layer">
+          <h3>Knowledge</h3>
+          <p>Canonical policies rather than copies buried in old help articles. Effective dates, supersession, jurisdiction, and a stable rule ID any answer can point back to.</p>
+        </div>
+        <div class="layer">
+          <h3>Procedure</h3>
+          <p>Your workflow as states and transitions, not prose. Prerequisites, valid next steps, where a human has to say yes, and how to escalate.</p>
+        </div>
+        <div class="layer">
+          <h3>Outcomes</h3>
+          <p>Structured reason codes with evidence, not a 400 and an apology. An agent that gets told exactly why can correct itself instead of guessing.</p>
+        </div>
+      </div>
+
+<pre><code>{
+  <span class="k">"outcome"</span>: {
+    <span class="k">"state"</span>:       <span class="v">"blocked"</span>,
+    <span class="k">"reason_code"</span>: <span class="v">"POLICY.RETURN_WINDOW_EXPIRED"</span>,
+    <span class="k">"retryable"</span>:   <span class="n">false</span>,
+    <span class="k">"evidence"</span>: [
+      { <span class="k">"resource"</span>: <span class="v">"policy/returns"</span>,
+        <span class="k">"version"</span>:  <span class="v">"2026-08-01"</span>,
+        <span class="k">"rule"</span>:     <span class="v">"RETURN-14"</span> }
+    ]
+  }
+}</code></pre>
+    </div>
+  </div>
+</section>
+
+<section class="band wrap" id="loop">
+  <div class="split">
+    <div>
+      <h2>You still get to improve</h2>
+      <p class="lede">The usual objection: give up the agent and you give up the feedback loop. You don't.</p>
+    </div>
+    <div>
+      <p class="lede">You already observe every request that reaches you. Which tool was called, which schema failed, which policy version was cited, how many attempts it took, whether the task finished. That's a sharper signal than a transcript, and it arrives already categorized.</p>
+      <p class="lede">Aggregate it. When one in three attempts at a task class dies on the same missing parameter, that is a defect in your schema  and you found it without anyone reading a customer's conversation.</p>
+      <p class="lede">The thing you improve is the surface. Every agent that touches it gets better at once, including the ones that haven't been built yet.</p>
+    </div>
+  </div>
+</section>
+
+<section class="band wrap">
+  <h2>Works with</h2>
+  <p class="lede">BYOA covers what a company publishes. Two adjacent problems have their own answers.</p>
+  <div class="cards">
+    <a class="card" href="https://signet.tools">
+      <span class="tag">signet.tools</span>
+      <h3>Scoped delegation</h3>
+      <p>Cryptographic authority bound to a task, so an agent carries exactly the permission the job needs and nothing that outlives it.</p>
+    </a>
+    <a class="card" href="http://jmcentire.github.io/tessera">
+      <span class="tag">tessera</span>
+      <h3>Portable provenance</h3>
+      <p>Signed, chained documents that stay verifiable after they leave you  so a claim can be checked rather than trusted.</p>
+    </a>
+  </div>
+</section>
+
+</main>
+
+<footer class="wrap">
+  <span>BYOA.TOOLS</span>
+  <span><a href="#chore">The chore</a>  <a href="#surface">The surface</a>  <a href="https://signet.tools">Signet</a></span>
+</footer>
+
+<script>
+(function(){
+  var COMPANIES = ["United","Delta","Airbnb","Marriott","VRBO","Wander"];
+  var FACTS = ["home address","seat & aisle","dietary needs","payment method","travel dates","who's coming"];
+  // Sparse density: many more stale/missing tidbits
+  var STALE = [
+    [0,1], [0,4], [1,0], [1,2], [1,5],
+    [2,1], [2,3], [2,4], [3,0], [3,5],
+    [4,1], [4,2], [4,4], [5,0], [5,3]
+  ]; 
+
+  var grid = document.getElementById("grid");
+  if(!grid) return;
+
+  var frag = document.createDocumentFragment();
+
+  // header row
+  var corner = document.createElement("div");
+  frag.appendChild(corner);
+  COMPANIES.forEach(function(c){
+    var h = document.createElement("div");
+    h.className = "col-head";
+    h.textContent = c;
+    frag.appendChild(h);
+  });
+
+  // fact rows
+  FACTS.forEach(function(f, r){
+    var label = document.createElement("div");
+    label.className = "row-label";
+    label.textContent = f;
+    frag.appendChild(label);
+
+    for(var c = 0; c < COMPANIES.length; c++){
+      var cell = document.createElement("div");
+      cell.className = "cell copy";
+      var isStale = STALE.some(function(p){ return p[0] === r && p[1] === c; });
+      if(isStale) cell.className += " stale";
+      cell.style.transitionDelay = ((c * 45) + (r * 30)) + "ms";
+      frag.appendChild(cell);
+    }
+  });
+
+  grid.appendChild(frag);
+
+  // The customer's own copy: promote the first column of each row visually in byoa mode
+  // by inserting an origin marker into the row-label column.
+  var labels = grid.querySelectorAll(".row-label");
+  labels.forEach(function(l){
+    l.style.display = "flex";
+    l.style.alignItems = "center";
+    l.style.gap = ".5rem";
+    var dot = document.createElement("span");
+    dot.className = "cell origin";
+    dot.style.flex = "0 0 10px";
+    dot.style.height = "10px";
+    l.insertBefore(dot, l.firstChild);
+  });
+
+  var VALUES = {
+    today: { m1:"6", m2:"6", m3:"6",
+      note:"Every company keeps its own copy of the same facts. Each one goes stale on its own schedule, and you are the only thing holding them in sync." },
+    byoa:  { m1:"0", m2:"1", m3:"0",
+      note:"The facts stay with the customer. Companies publish a surface their agent reads at the moment of use  nothing to copy, nothing to keep in sync, nothing left behind." }
+  };
+
+  var m1 = document.getElementById("m1"),
+      m2 = document.getElementById("m2"),
+      m3 = document.getElementById("m3"),
+      note = document.getElementById("note"),
+      bToday = document.getElementById("btn-today"),
+      bByoa = document.getElementById("btn-byoa");
+
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function countTo(el, target, ms){
+    var from = parseInt(el.textContent, 10);
+    var to = parseInt(target, 10);
+    if(reduce || from === to){ el.textContent = target; return; }
+    var start = performance.now();
+    function step(now){
+      var t = Math.min(1, (now - start) / ms);
+      var eased = 1 - Math.pow(1 - t, 3);
+      el.textContent = Math.round(from + (to - from) * eased);
+      if(t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  function setMode(mode){
+    grid.setAttribute("data-mode", mode);
+    var v = VALUES[mode];
+    countTo(m1, v.m1, 700);
+    countTo(m2, v.m2, 700);
+    countTo(m3, v.m3, 700);
+    note.textContent = v.note;
+    bToday.setAttribute("aria-pressed", String(mode === "today"));
+    bByoa.setAttribute("aria-pressed", String(mode === "byoa"));
+  }
+
+  bToday.addEventListener("click", function(){ setMode("today"); });
+  bByoa.addEventListener("click", function(){ setMode("byoa"); });
+
+  // Initialize strictly to today mode rather than auto-collapsing
+  setMode("today");
+
+})();
+</script>
+</body>
+</html>
